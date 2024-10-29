@@ -1,0 +1,17 @@
+{
+  "name": "duplicate-issue-checker",
+  "version": "1.0.0",
+  "description": "- **Language**: Python 3.10\r - **Framework**: Flask\r - **Frontend**: TailwindCSS",
+  "scripts": {
+    "start": "npx tailwindcss -i ./app/static/css/base.css -o ./app/static/css/tailwind.css",
+    "dev": "npx tailwindcss -i ./app/static/css/base.css -o ./app/static/css/tailwind.css --watch"
+  },
+  "author": "Ymmy833y",
+  "license": "MIT",
+  "devDependencies": {
+    "tailwindcss": "^3.4.14"
+  },
+  "dependencies": {
+    "duplicate-issue-checker": "file:"
+  }
+}
