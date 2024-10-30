@@ -103,8 +103,9 @@ def preprocess_text(text: str):
         return ''
     text = re.sub(r'http\S+', '', text)
     text = re.sub(r'@\w+', '', text)
-    text = re.sub(r'#\w+', '', text)
+    text = re.sub(r'#\S+', '', text)
     text = re.sub(r'[^A-Za-z0-9\s]', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
     text = text.lower()
     return text
 
@@ -113,12 +114,12 @@ def find_related_issues(title: str, description: str, issues, similarity_thresho
     issue_ids = []
     issue_data = []
     for issue in issues:
-        combined_text = issue.get('title') + ' ' + ' '.join(issue.get('title'))
-        issue_texts.append(combined_text)
+        combined_text = issue.get('title') + ' ' + ' '.join(filter(None, map(str, issue.get('comments', []))))
+        issue_texts.append(preprocess_text(combined_text))
         issue_ids.append(issue.get('number'))
         issue_data.append(issue)
 
-    corpus = issue_texts + [title + description]
+    corpus = issue_texts + [preprocess_text(f'title: {title}, description: {description}')]
     logger.debug(f'corpus: {corpus}')
 
     vectorizer = TfidfVectorizer(stop_words='english')
@@ -144,7 +145,7 @@ def find_related_issues(title: str, description: str, issues, similarity_thresho
     return related_issues
 
 def get_related_issues_detail(related_issues_len):
-    message = f"There are {related_issues_len} related issues." if related_issues_len > 0 else "No related issues found."
+    message = f'There are {related_issues_len} related issues.' if related_issues_len > 0 else 'No related issues found.'
     return {
         'total': related_issues_len,
         'message': message
