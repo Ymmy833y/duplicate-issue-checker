@@ -61,7 +61,7 @@ class TestValidateFormData:
         try:
             validate_form_data(form_data)
         except MissingFieldsError:
-            pytest.fail("Unexpected MissingFieldsError raised.")
+            pytest.fail('Unexpected MissingFieldsError raised.')
 
     def test_missing_fields(self):
         form_data = ImmutableMultiDict({
@@ -126,13 +126,13 @@ class TestFetchIssues:
         with pytest.raises(RepositoryNotFoundError) as exc_info:
             fetch_issues(owner, repository)
         
-        assert str(exc_info.value) == f"Repository not found: https://github.com/{owner}/{repository}"
+        assert str(exc_info.value) == f'Repository not found: https://github.com/{owner}/{repository}'
 
     @patch('requests.get')
     def test_other_http_error(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 500
-        mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_response.raise_for_status.side_effect = requests.HTTPError('500 Server Error')
         mock_get.return_value = mock_response
 
         owner = 'test_owner'
@@ -141,7 +141,7 @@ class TestFetchIssues:
         with pytest.raises(requests.HTTPError) as exc_info:
             fetch_issues(owner, repository)
 
-        assert str(exc_info.value) == "500 Server Error"
+        assert str(exc_info.value) == '500 Server Error'
 
 class TestFetchCommentsForIssue:
     def setup_method(self):
@@ -190,7 +190,7 @@ class TestFetchCommentsForIssue:
     def test_http_error(self, mock_get):
         mock_response = MagicMock()
         mock_response.status_code = 500
-        mock_response.raise_for_status.side_effect = requests.HTTPError("500 Server Error")
+        mock_response.raise_for_status.side_effect = requests.HTTPError('500 Server Error')
         mock_get.return_value = mock_response
 
         owner = 'test_owner'
@@ -200,7 +200,7 @@ class TestFetchCommentsForIssue:
         with pytest.raises(requests.HTTPError) as exc_info:
             fetch_comments_for_issue(owner, repository, issue_number)
 
-        assert str(exc_info.value) == "500 Server Error"
+        assert str(exc_info.value) == '500 Server Error'
 
     @patch('requests.get')
     def test_no_comments(self, mock_get):
@@ -319,7 +319,7 @@ class TestGetIssuesPRsWithComments:
         with pytest.raises(RepositoryNotFoundError) as exc_info:
             get_issues_prs_with_comments(owner, repository)
 
-        assert str(exc_info.value) == "Repository not found: https://github.com/test_owner/test_repo"
+        assert str(exc_info.value) == 'Repository not found: https://github.com/test_owner/test_repo'
 
         mock_fetch_issues.assert_called_once_with(owner, repository)
         mock_fetch_comments_for_issue.assert_not_called()
@@ -337,7 +337,7 @@ class TestGetIssuesPRsWithComments:
             }
         ]
 
-        mock_fetch_comments_for_issue.side_effect = requests.HTTPError("Failed to fetch comments")
+        mock_fetch_comments_for_issue.side_effect = requests.HTTPError('Failed to fetch comments')
 
         owner = 'test_owner'
         repository = 'test_repo'
@@ -345,7 +345,7 @@ class TestGetIssuesPRsWithComments:
         with pytest.raises(requests.HTTPError) as exc_info:
             get_issues_prs_with_comments(owner, repository)
 
-        assert str(exc_info.value) == "Failed to fetch comments"
+        assert str(exc_info.value) == 'Failed to fetch comments'
 
         mock_fetch_issues.assert_called_once_with(owner, repository)
         mock_fetch_comments_for_issue.assert_called_once_with(owner, repository, 1)
@@ -353,43 +353,43 @@ class TestGetIssuesPRsWithComments:
 class TestPreprocessText:
     def test_not_text(self):
         input_text = None
-        expected_output = ""
+        expected_output = ''
         assert preprocess_text(input_text) == expected_output
     
     def test_remove_urls(self):
-        input_text = "Check out this link: http://example.com and https://another.com/page"
-        expected_output = "check out this link and"
+        input_text = 'Check out this link: http://example.com and https://another.com/page'
+        expected_output = 'check out this link and'
         assert preprocess_text(input_text) == expected_output
 
     def test_remove_mentions(self):
-        input_text = "Hello @user1 and @user2, welcome!"
-        expected_output = "hello and welcome"
+        input_text = 'Hello @user1 and @user2, welcome!'
+        expected_output = 'hello and welcome'
         assert preprocess_text(input_text) == expected_output
 
     def test_remove_hashtags(self):
-        input_text = "This is a #test of the #preprocess_text function."
-        expected_output = "this is a of the function"
+        input_text = 'This is a #test of the #preprocess_text function.'
+        expected_output = 'this is a of the function'
         assert preprocess_text(input_text) == expected_output
 
     def test_remove_special_characters(self):
-        input_text = "Hello, World! This is a test. #100DaysOfCode @python_dev"
-        expected_output = "hello world this is a test"
+        input_text = 'Hello, World! This is a test. #100DaysOfCode @python_dev'
+        expected_output = 'hello world this is a test'
         assert preprocess_text(input_text) == expected_output
 
     def test_multiple_spaces(self):
-        input_text = "This    is  a     test."
-        expected_output = "this is a test"
+        input_text = 'This    is  a     test.'
+        expected_output = 'this is a test'
         assert preprocess_text(input_text) == expected_output
 
     def test_already_clean_text(self):
-        input_text = "This text is already clean and has no special elements"
-        expected_output = "this text is already clean and has no special elements"
+        input_text = 'This text is already clean and has no special elements'
+        expected_output = 'this text is already clean and has no special elements'
         assert preprocess_text(input_text) == expected_output
 
 class TestFindRelatedIssues:
     def test_basic(self):
-        title = "Improve login functionality"
-        description = "We need to enhance the login process to support OAuth."
+        title = 'Improve login functionality'
+        description = 'We need to enhance the login process to support OAuth.'
         issues = [
             {
                 'number': 1,
@@ -453,8 +453,8 @@ class TestFindRelatedIssues:
             assert related['similarity'] >= similarity_threshold
 
     def test_no_related(self):
-        title = "Implement dark mode"
-        description = "Add a dark mode option to improve user experience in low-light environments."
+        title = 'Implement dark mode'
+        description = 'Add a dark mode option to improve user experience in low-light environments.'
         issues = [
             {
                 'number': 1,
@@ -478,8 +478,8 @@ class TestFindRelatedIssues:
         assert related_issues == []
 
     def test_threshold_edge(self):
-        title = "Optimize database"
-        description = "Refactor the database schema and optimize queries for better performance."
+        title = 'Optimize database'
+        description = 'Refactor the database schema and optimize queries for better performance.'
         issues = [
             {
                 'number': 1,
@@ -504,8 +504,8 @@ class TestFindRelatedIssues:
             assert issue['similarity'] >= similarity_threshold
 
     def test_with_empty_comments(self):
-        title = "Update user profile feature"
-        description = "Enhance the user profile page with new fields and better UI."
+        title = 'Update user profile feature'
+        description = 'Enhance the user profile page with new fields and better UI.'
         issues = [
             {
                 'number': 1,
