@@ -1,0 +1,22 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+ignore=venv,migrations
+output-format=colorized
+
+[MESSAGES CONTROL]
+disable=C0114,C0115,C0116,R0903,W0718
+
+[FORMAT]
+max-line-length=120
+max-args=5
+
+[DESIGN]
+max-attributes=10
+max-branches=12
+max-locals=30
+
+[TYPECHECK]
+ignored-classes=SQLAlchemy,Request
+
+[SIMILARITIES]
+min-similarity-lines=4

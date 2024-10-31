@@ -1,35 +1,47 @@
+# pylint: disable=W0621
+
+from unittest.mock import patch
 import pytest
 from flask import template_rendered
-from unittest.mock import patch
 from app import create_app
 from app.exceptions import MissingFieldsError, RepositoryNotFoundError
 
 @pytest.fixture
-def app():
+def test_app():
     app = create_app()
     app.config['TESTING'] = True
     return app
 
 @pytest.fixture
-def client(app):
-    return app.test_client()
+def client(test_app):
+    return test_app.test_client()
 
 @pytest.fixture
-def captured_templates(app):
+def captured_templates(test_app):
     recorded = []
 
-    def record(sender, template, context, **extra):
+    def record(_sender, template, context, **_extra):
         recorded.append((template, context))
 
-    template_rendered.connect(record, app)
+    template_rendered.connect(record, test_app)
     yield recorded
-    template_rendered.disconnect(record, app)
+    template_rendered.disconnect(record, test_app)
 
 class TestIndex:
     def test_include_session_data(self, client, captured_templates):
         with client.session_transaction() as sess:
-            sess['form_data'] = {'owner': 'test_owner', 'repository': 'test_repository', 'title': 'test_title'}
-            sess['issues'] = [{'number': 1, 'title': 'test_title', 'url': 'test_url', 'state': 'test_state', 'comments': ['test_comment']}]
+            sess['form_data'] = {
+                'owner': 'test_owner',
+                'repository': 'test_repository',
+                'title': 'test_title'
+            }
+            sess['issues'] = [{
+                'number': 1,
+                'title': 'test_title',
+                'url': 'test_url',
+                'state': 'test_state',
+                'comments': ['test_comment']
+            }]
             sess['detail'] = {'total': 1, 'message': 'test_message'}
             sess['error_message'] = 'test_error_message'
 
@@ -40,8 +52,18 @@ class TestIndex:
         assert len(captured_templates) == 1
         template, context = captured_templates[0]
         assert template.name == 'index.html'
-        assert context['form_data'] == {'owner': 'test_owner', 'repository': 'test_repository', 'title': 'test_title'}
-        assert context['issues'] == [{'number': 1, 'title': 'test_title', 'url': 'test_url', 'state': 'test_state', 'comments': ['test_comment']}]
+        assert context['form_data'] == {
+            'owner': 'test_owner',
+            'repository': 'test_repository',
+            'title': 'test_title'
+        }
+        assert context['issues'] == [{
+            'number': 1,
+            'title': 'test_title',
+            'url': 'test_url',
+            'state': 'test_state',
+            'comments': ['test_comment']
+        }]
         assert context['detail'] == {'total': 1, 'message': 'test_message'}
         assert context['error_message'] == 'test_error_message'
 
@@ -121,7 +143,9 @@ class TestSearch:
             'repository': 'nonexistent_repo',
             'title': 'test_title'
         }
-        mock_get_related_issues.side_effect = RepositoryNotFoundError('test_owner', 'nonexistent_repo')
+        mock_get_related_issues.side_effect = RepositoryNotFoundError(
+            'test_owner', 'nonexistent_repo'
+        )
 
         response = client.post('/search', data=form_data, follow_redirects=False)
 
@@ -132,7 +156,9 @@ class TestSearch:
             assert sess['form_data'] == form_data
             assert 'issues' not in sess
             assert 'detail' not in sess
-            assert sess['error_message'] == 'Repository not found: https://github.com/test_owner/nonexistent_repo'
+            assert sess['error_message'] == (
+                'Repository not found: https://github.com/test_owner/nonexistent_repo'
+            )
 
     @patch('app.routes.get_related_issues')
     def test_search_unexpected_exception(self, mock_get_related_issues, client):
@@ -152,4 +178,6 @@ class TestSearch:
             assert sess['form_data'] == form_data
             assert 'issues' not in sess
             assert 'detail' not in sess
-            assert sess['error_message'] == 'An unexpected error occurred. Please try again.'
+            assert sess['error_message'] == (
+                'An unexpected error occurred. Please try again.'
+            )

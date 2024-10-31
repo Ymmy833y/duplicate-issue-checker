@@ -1,6 +1,6 @@
-import requests
-import re
 import logging
+import re
+import requests
 from flask import current_app
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -13,21 +13,21 @@ def get_related_issues(form_data: ImmutableMultiDict[str, str]):
     validate_form_data(form_data)
 
     issues = get_issues_prs_with_comments(form_data.get('owner'), form_data.get('repository'))
-    logger.debug(f'issues: {issues}')
+    logger.debug('issues: %s', issues)
 
     related_issues = find_related_issues(form_data.get('title'), form_data.get('description'), issues)
-    logger.debug(f'related_issues: {related_issues}')
+    logger.debug('related_issues: %s', related_issues)
     return related_issues, get_related_issues_detail(len(related_issues))
 
 def validate_form_data(form_data: ImmutableMultiDict[str, str]):
     missing_fields = []
     required_fields = ['owner', 'repository', 'title']
-    
+
     for field in required_fields:
         value = form_data.get(field)
         if not value:
             missing_fields.append(field)
-    
+
     if missing_fields:
         raise MissingFieldsError(missing_fields)
 
@@ -39,20 +39,20 @@ def fetch_issues(owner: str, repository: str):
     page = 1
     while True:
         params = {'state': 'all', 'per_page': 100, 'page': page}
-        response = requests.get(issues_url, headers=headers, params=params)
+        response = requests.get(issues_url, headers=headers, params=params, timeout=10)  # timeout追加
 
         if response.status_code == 404:
             raise RepositoryNotFoundError(owner, repository)
 
         if response.status_code != 200:
             response.raise_for_status()
-        
+
         data = response.json()
         if not data:
             break
         issues.extend(data)
         page += 1
- 
+
     return issues
 
 def fetch_comments_for_issue(owner: str, repository: str, issue_number: str):
@@ -64,11 +64,11 @@ def fetch_comments_for_issue(owner: str, repository: str, issue_number: str):
 
     while True:
         params = {'per_page': 100, 'page': page}
-        response = requests.get(comments_url, headers=headers, params=params)
-        
+        response = requests.get(comments_url, headers=headers, params=params, timeout=10)  # timeout追加
+
         if response.status_code != 200:
             response.raise_for_status()
-        
+
         data = response.json()
         if not data:
             break
@@ -83,12 +83,12 @@ def get_issues_prs_with_comments(owner: str, repository: str):
         issue_number = issue['number']
         title = issue['title']
         url = issue['html_url']
-        state = issue['state'].upper() 
+        state = issue['state'].upper()
         description = issue['body']
-        
+
         comments = fetch_comments_for_issue(owner, repository, issue_number)
         comment_texts = [description] + [comment['body'] for comment in comments]
-        
+
         issues.append({
             'number': issue_number,
             'title': title,
@@ -120,7 +120,7 @@ def find_related_issues(title: str, description: str, issues, similarity_thresho
         issue_data.append(issue)
 
     corpus = issue_texts + [preprocess_text(f'title: {title}, description: {description}')]
-    logger.debug(f'corpus: {corpus}')
+    logger.debug('corpus: %s', corpus)
 
     vectorizer = TfidfVectorizer(stop_words='english')
     tfidf_matrix = vectorizer.fit_transform(corpus)
@@ -145,7 +145,7 @@ def find_related_issues(title: str, description: str, issues, similarity_thresho
     return related_issues
 
 def get_related_issues_detail(related_issues_len):
-    message = f'There are {related_issues_len} related issues.' if related_issues_len > 0 else 'No related issues found.'
+    message = f"{related_issues_len} related issues found." if related_issues_len else "No related issues found."
     return {
         'total': related_issues_len,
         'message': message
