@@ -32,3 +32,7 @@ jobs:
       - name: Run tests
         run: |
           pytest
+
+      - name: Run pylint
+        run: |
+          pylint app/**/*.py tests/**/*.py run.py

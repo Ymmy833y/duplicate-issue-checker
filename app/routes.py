@@ -14,7 +14,13 @@ def index():
     detail = session.pop('detail', {})
     error_message = session.pop('error_message', None)
 
-    return render_template('index.html', form_data=form_data, issues=issues, detail=detail, error_message=error_message)
+    return render_template(
+        'index.html',
+        form_data=form_data,
+        issues=issues,
+        detail=detail,
+        error_message=error_message
+    )
 
 @main_routes.route('/search', methods=['POST'])
 def search():
@@ -24,11 +30,11 @@ def search():
         session['issues'] = issues
         session['detail'] = detail
     except (MissingFieldsError, RepositoryNotFoundError) as e:
-        logger.error(str(e))
+        logger.error('%s', e)
         session['error_message'] = str(e)
     except Exception as e:
-        logger.error("An unexpected error occurred: " + str(e))
+        logger.error("An unexpected error occurred: %s", e)
         session['error_message'] = "An unexpected error occurred. Please try again."
-    
+
     session['form_data'] = request.form.to_dict()
     return redirect(url_for('main_routes.index'))

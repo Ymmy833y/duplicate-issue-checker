@@ -1,11 +1,15 @@
+# pylint: disable=W0621
+
+from unittest.mock import MagicMock, patch, call
+from typing import Any
+
 import pytest
 import requests
-from unittest.mock import MagicMock, patch, call
-from werkzeug.datastructures import ImmutableMultiDict
 from flask import Flask
+from werkzeug.datastructures import ImmutableMultiDict
 
 from app.logics import (
-    get_related_issues, validate_form_data, fetch_issues, 
+    get_related_issues, validate_form_data, fetch_issues,
     fetch_comments_for_issue, get_issues_prs_with_comments, preprocess_text,
     find_related_issues, get_related_issues_detail
 )
@@ -34,16 +38,23 @@ class TestGetRelatedIssues:
             {'number': 2, 'title': 'issue2', 'url': 'url', 'state': 'open', 'comments': ['comment3']},
         ]
         mock_find_related_issues.return_value = [
-            {'number': 1, 'title': 'issue1', 'url': 'url', 'state': 'open', 'comments': ['comment1', 'comment2'], 'similarity': float(0.2)},
+            {
+                'number': 1, 'title': 'issue1', 'url': 'url', 'state': 'open', 
+                'comments': ['comment1', 'comment2'], 'similarity': 0.2
+            },
         ]
 
         related_issues, related_issues_detail = get_related_issues(form_data)
 
         mock_get_issues_prs_with_comments.assert_called_once_with('test_owner', 'test_repo')
-        mock_find_related_issues.assert_called_once_with('test_title', 'test_description', mock_get_issues_prs_with_comments.return_value)
-        
+        mock_find_related_issues.assert_called_once_with(
+            'test_title', 'test_description', mock_get_issues_prs_with_comments.return_value)
+
         assert related_issues == [
-            {'number': 1, 'title': 'issue1', 'url': 'url', 'state': 'open', 'comments': ['comment1', 'comment2'], 'similarity': float(0.2)},
+            {
+                'number': 1, 'title': 'issue1', 'url': 'url', 'state': 'open', 
+                'comments': ['comment1', 'comment2'], 'similarity': 0.2
+            },
         ]
         assert related_issues_detail == {
             'total': 1,
@@ -57,7 +68,7 @@ class TestValidateFormData:
             'repository': 'test_repo',
             'title': 'test_title'
         })
-        
+
         try:
             validate_form_data(form_data)
         except MissingFieldsError:
@@ -69,10 +80,12 @@ class TestValidateFormData:
         })
         with pytest.raises(MissingFieldsError) as excinfo:
             validate_form_data(form_data)
-        
+
         assert excinfo.value.missing_fields == ['repository', 'title']
 
 class TestFetchIssues:
+    app: Flask
+    app_context: Any
     def setup_method(self):
         self.app = Flask(__name__)
         self.app.config['GITHUB_ACCESS_TOKEN'] = 'test_token'
@@ -106,12 +119,14 @@ class TestFetchIssues:
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues',
             headers=expected_headers,
-            params=expected_params_page1
+            params=expected_params_page1,
+            timeout=30,
         )
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues',
             headers=expected_headers,
-            params=expected_params_page2
+            params=expected_params_page2,
+            timeout=30,
         )
 
     @patch('requests.get')
@@ -125,7 +140,7 @@ class TestFetchIssues:
 
         with pytest.raises(RepositoryNotFoundError) as exc_info:
             fetch_issues(owner, repository)
-        
+
         assert str(exc_info.value) == f'Repository not found: https://github.com/{owner}/{repository}'
 
     @patch('requests.get')
@@ -144,6 +159,8 @@ class TestFetchIssues:
         assert str(exc_info.value) == '500 Server Error'
 
 class TestFetchCommentsForIssue:
+    app: Flask
+    app_context: Any
     def setup_method(self):
         self.app = Flask(__name__)
         self.app.config['GITHUB_ACCESS_TOKEN'] = 'test_token'
@@ -158,7 +175,7 @@ class TestFetchCommentsForIssue:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.json.side_effect = [
-            [{'id': 1, 'body': 'Comment 1'}],
+            [{'body': 'Comment 1 on issue 1'}, {'body': 'Comment 2 on issue 1'}],
             []
         ]
         mock_get.return_value = mock_response
@@ -168,7 +185,7 @@ class TestFetchCommentsForIssue:
         issue_number = '1'
         comments = fetch_comments_for_issue(owner, repository, issue_number)
 
-        assert comments == [{'id': 1, 'body': 'Comment 1'}]
+        assert comments == [{'body': 'Comment 1 on issue 1'}, {'body': 'Comment 2 on issue 1'}]
         assert mock_get.call_count == 2
 
         expected_headers = {'Authorization': 'token test_token'}
@@ -178,12 +195,14 @@ class TestFetchCommentsForIssue:
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers=expected_headers,
-            params=expected_params_page1
+            params=expected_params_page1,
+            timeout=30,
         )
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers=expected_headers,
-            params=expected_params_page2
+            params=expected_params_page2,
+            timeout=30,
         )
 
     @patch('requests.get')
@@ -214,11 +233,12 @@ class TestFetchCommentsForIssue:
         issue_number = '1'
 
         comments = fetch_comments_for_issue(owner, repository, issue_number)
-        assert comments == []
+        assert not comments
         mock_get.assert_called_once_with(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers={'Authorization': 'token test_token'},
-            params={'per_page': 100, 'page': 1}
+            params={'per_page': 100, 'page': 1},
+            timeout=30,
         )
 
 class TestGetIssuesPRsWithComments:
@@ -244,16 +264,15 @@ class TestGetIssuesPRsWithComments:
         ]
 
         # Mock return value for fetch_comments_for_issue
-        def fetch_comments_side_effect(owner, repo, issue_number):
+        def fetch_comments_side_effect(_owner, _repo, issue_number):
             if issue_number == 1:
                 return [
                     {'body': 'Comment 1 on issue 1'},
                     {'body': 'Comment 2 on issue 1'}
                 ]
-            elif issue_number == 2:
+            if issue_number == 2:
                 return []  # No comments on Issue 2
-            else:
-                return []
+            return []
 
         mock_fetch_comments_for_issue.side_effect = fetch_comments_side_effect
 
@@ -303,7 +322,7 @@ class TestGetIssuesPRsWithComments:
         repository = 'test_repo'
         issues = get_issues_prs_with_comments(owner, repository)
 
-        assert issues == []
+        assert not issues
 
         mock_fetch_issues.assert_called_once_with(owner, repository)
         mock_fetch_comments_for_issue.assert_not_called()
@@ -355,7 +374,7 @@ class TestPreprocessText:
         input_text = None
         expected_output = ''
         assert preprocess_text(input_text) == expected_output
-    
+
     def test_remove_urls(self):
         input_text = 'Check out this link: http://example.com and https://another.com/page'
         expected_output = 'check out this link and'
@@ -394,21 +413,32 @@ class TestFindRelatedIssues:
             {
                 'number': 1,
                 'title': 'Fix crash on startup',
-                'comments': ['The application crashes immediately after launch.', 'App crashes on startup for some users.', 'Investigate the crash logs.'],
+                'comments': [
+                    'The application crashes immediately after launch.', 
+                    'App crashes on startup for some users.', 
+                    'Investigate the crash logs.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/1',
                 'state': 'open',
             },
             {
                 'number': 2,
                 'title': 'Add support for new OAuth providers',
-                'comments': ['We should expand the OAuth support to include more providers.', 'Consider adding support for Facebook and GitHub OAuth.'],
+                'comments': [
+                    'We should expand the OAuth support to include more providers.', 
+                    'Consider adding support for Facebook and GitHub OAuth.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/2',
                 'state': 'closed',
             },
             {
                 'number': 3,
                 'title': 'Update documentation for login',
-                'comments': ['The login section in the documentation is outdated.', 'Documentation needs to reflect the new login changes.', 'Add examples for OAuth login.'],
+                'comments': [
+                    'The login section in the documentation is outdated.', 
+                    'Documentation needs to reflect the new login changes.', 
+                    'Add examples for OAuth login.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/3',
                 'state': 'open',
             },
@@ -428,7 +458,11 @@ class TestFindRelatedIssues:
             {
                 'number': 3,
                 'title': 'Update documentation for login',
-                'comments': ['The login section in the documentation is outdated.', 'Documentation needs to reflect the new login changes.', 'Add examples for OAuth login.'],
+                'comments': [
+                    'The login section in the documentation is outdated.', 
+                    'Documentation needs to reflect the new login changes.', 
+                    'Add examples for OAuth login.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/3',
                 'state': 'open',
                 'similarity': pytest.approx(0.3, 0.1)
@@ -436,7 +470,10 @@ class TestFindRelatedIssues:
             {
                 'number': 2,
                 'title': 'Add support for new OAuth providers',
-                'comments': ['We should expand the OAuth support to include more providers.', 'Consider adding support for Facebook and GitHub OAuth.'],
+                'comments': [
+                    'We should expand the OAuth support to include more providers.', 
+                    'Consider adding support for Facebook and GitHub OAuth.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/2',
                 'state': 'closed',
                 'similarity': pytest.approx(0.4, 0.1)
@@ -459,14 +496,22 @@ class TestFindRelatedIssues:
             {
                 'number': 1,
                 'title': 'Fix crash on startup',
-                'comments': ['The application crashes immediately after launch.', 'App crashes on startup for some users.', 'Investigate the crash logs.'],
+                'comments': [
+                    'The application crashes immediately after launch.', 
+                    'App crashes on startup for some users.', 
+                    'Investigate the crash logs.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/1',
                 'state': 'open',
             },
             {
                 'number': 2,
                 'title': 'Improve performance on mobile devices',
-                'comments': ['Performance issues on mobile need to be addressed.', 'The app is slow on older mobile devices.', 'Optimize image loading times.'],
+                'comments': [
+                    'Performance issues on mobile need to be addressed.', 
+                    'The app is slow on older mobile devices.', 
+                    'Optimize image loading times.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/2',
                 'state': 'closed',
             }
@@ -475,7 +520,7 @@ class TestFindRelatedIssues:
 
         related_issues = find_related_issues(title, description, issues, similarity_threshold)
 
-        assert related_issues == []
+        assert not related_issues
 
     def test_threshold_edge(self):
         title = 'Optimize database'
@@ -484,14 +529,22 @@ class TestFindRelatedIssues:
             {
                 'number': 1,
                 'title': 'Database schema refactor',
-                'comments': ['The current database schema is not optimized for performance.', 'We need to normalize the database tables.', 'Consider indexing frequently queried fields.'],
+                'comments': [
+                    'The current database schema is not optimized for performance.', 
+                    'We need to normalize the database tables.', 
+                    'Consider indexing frequently queried fields.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/1',
                 'state': 'open',
             },
             {
                 'number': 2,
                 'title': 'Optimize query performance',
-                'comments': ['Improve the performance of database queries.', 'Queries are taking too long to execute.', 'Implement caching for frequent queries.'],
+                'comments': [
+                    'Improve the performance of database queries.', 
+                    'Queries are taking too long to execute.', 
+                    'Implement caching for frequent queries.'
+                ],
                 'url': 'https://github.com/test_owner/test_repo/issues/2',
                 'state': 'closed',
             }
