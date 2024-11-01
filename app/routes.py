@@ -14,7 +14,13 @@ def index():
     detail = session.pop('detail', {})
     error_message = session.pop('error_message', None)
 
-    return render_template('index.html', form_data=form_data, issues=issues, detail=detail, error_message=error_message)
+    return render_template(
+        'index.html',
+        form_data=form_data,
+        issues=issues,
+        detail=detail,
+        error_message=error_message
+    )
 
 @main_routes.route('/search', methods=['POST'])
 def search():

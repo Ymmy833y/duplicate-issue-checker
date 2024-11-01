@@ -26,3 +26,13 @@
    npm run start
    ```
 7. Access http://localhost:5000/
+
+## Run test
+```sh
+pytest
+```
+
+## Run lint
+```sh
+pylint app/**/*.py tests/**/*.py run.py
+```

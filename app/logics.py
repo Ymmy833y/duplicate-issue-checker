@@ -39,7 +39,7 @@ def fetch_issues(owner: str, repository: str):
     page = 1
     while True:
         params = {'state': 'all', 'per_page': 100, 'page': page}
-        response = requests.get(issues_url, headers=headers, params=params, timeout=10)  # timeout追加
+        response = requests.get(issues_url, headers=headers, params=params, timeout=30)
 
         if response.status_code == 404:
             raise RepositoryNotFoundError(owner, repository)
@@ -64,7 +64,7 @@ def fetch_comments_for_issue(owner: str, repository: str, issue_number: str):
 
     while True:
         params = {'per_page': 100, 'page': page}
-        response = requests.get(comments_url, headers=headers, params=params, timeout=10)  # timeout追加
+        response = requests.get(comments_url, headers=headers, params=params, timeout=30)
 
         if response.status_code != 200:
             response.raise_for_status()
@@ -145,7 +145,7 @@ def find_related_issues(title: str, description: str, issues, similarity_thresho
     return related_issues
 
 def get_related_issues_detail(related_issues_len):
-    message = f"{related_issues_len} related issues found." if related_issues_len else "No related issues found."
+    message = f"There are {related_issues_len} related issues." if related_issues_len else "No related issues found."
     return {
         'total': related_issues_len,
         'message': message

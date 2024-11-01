@@ -119,12 +119,14 @@ class TestFetchIssues:
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues',
             headers=expected_headers,
-            params=expected_params_page1
+            params=expected_params_page1,
+            timeout=30,
         )
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues',
             headers=expected_headers,
-            params=expected_params_page2
+            params=expected_params_page2,
+            timeout=30,
         )
 
     @patch('requests.get')
@@ -193,12 +195,14 @@ class TestFetchCommentsForIssue:
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers=expected_headers,
-            params=expected_params_page1
+            params=expected_params_page1,
+            timeout=30,
         )
         mock_get.assert_any_call(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers=expected_headers,
-            params=expected_params_page2
+            params=expected_params_page2,
+            timeout=30,
         )
 
     @patch('requests.get')
@@ -233,7 +237,8 @@ class TestFetchCommentsForIssue:
         mock_get.assert_called_once_with(
             f'https://api.github.com/repos/{owner}/{repository}/issues/{issue_number}/comments',
             headers={'Authorization': 'token test_token'},
-            params={'per_page': 100, 'page': 1}
+            params={'per_page': 100, 'page': 1},
+            timeout=30,
         )
 
 class TestGetIssuesPRsWithComments:
