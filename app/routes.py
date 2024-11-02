@@ -1,7 +1,7 @@
 import logging
 from flask import Blueprint, render_template, redirect, url_for, request, session
-from .logics import get_related_issues
-from .exceptions import MissingFieldsError, RepositoryNotFoundError
+from .services.issue_service import get_related_issues
+from .utils.exceptions import MissingFieldsError, RepositoryNotFoundError
 
 main_routes = Blueprint('main_routes', __name__)
 logger = logging.getLogger(__name__)
