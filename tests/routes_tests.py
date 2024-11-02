@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from flask import template_rendered
 from app import create_app
-from app.exceptions import MissingFieldsError, RepositoryNotFoundError
+from app.utils.exceptions import MissingFieldsError, RepositoryNotFoundError
 
 @pytest.fixture
 def test_app():
