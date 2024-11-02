@@ -28,7 +28,7 @@
             <div>
                 <label for="owner" class="block text-gray-700 font-semibold mb-2">
                     Repository URL
-                    <strong class="text-xl text-red-600">*</strong>
+                    <strong class="text-sm text-red-600 ml-2">* Required</strong>
                 </label>
                 <div class="flex items-center space-x-2 w-full">
                     <span class="text-gray-700 w-auto">https://github.com/</span>
@@ -45,7 +45,7 @@
             <div>
                 <label for="title" class="block text-gray-700 font-semibold mb-2">
                     Title
-                    <strong class="text-xl text-red-600">*</strong>
+                    <strong class="text-sm text-red-600 ml-2">* Required</strong>
                 </label>
                 <input type="text" placeholder="Enter the title..." name="title" id="title"
                     value="{{ form_data.get('title', '') }}"
@@ -54,8 +54,8 @@
             <div>
                 <label for="description" class="block text-gray-700 font-semibold mb-2">Description</label>
                 <textarea name="description" id="description" rows="4" placeholder="Enter the description..."
-                    value="{{ form_data.get('description', '') }}"
-                    class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"></textarea>
+                    class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500"
+                    >{{ form_data.get('description', '') }}</textarea>
             </div>
             <div class="text-center">
                 <button type="submit"
