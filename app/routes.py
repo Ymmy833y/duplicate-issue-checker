@@ -13,15 +13,11 @@ logger = logging.getLogger(__name__)
 def index():
     logger.debug('Index is called')
     form_data = session.pop('form_data', {})
-    issues = session.pop('issues', [])
-    detail = session.pop('detail', {})
     error_message = session.pop('error_message', None)
 
     return render_template(
         'index.html',
         form_data=form_data,
-        issues=issues,
-        detail=detail,
         error_message=error_message
     )
 

@@ -24,9 +24,10 @@ def create_app(config_class=Config):
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
-    file_handler = FileHandler(filename=f'{log_directory}/app.log', encoding='utf-8')
-    file_handler.setFormatter(formatter)
-    logger.addHandler(file_handler)
+    if not app.config.get("TESTING", False):
+        file_handler = FileHandler(filename=f'{log_directory}/app.log', encoding='utf-8')
+        file_handler.setFormatter(formatter)
+        logger.addHandler(file_handler)
 
     db.init_app(app)
 

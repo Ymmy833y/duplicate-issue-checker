@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Duplicate Issue Checker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/markdown.css') }}">
+    <script src="{{ url_for('static', filename='dist/bundle.js') }}"></script>
 </head>
 
 <body class="min-h-screen flex flex-col bg-gray-100">
@@ -40,7 +42,6 @@
                         value="{{ form_data.get('repository', '') }}"
                         class="flex-grow p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-yellow-500">
                 </div>
-
             </div>
             <div>
                 <label for="title" class="block text-gray-700 font-semibold mb-2">
@@ -98,7 +99,6 @@
                         class="text-lg font-semibold text-blue-600 hover:underline">
                         #{{ issue.number}} {{ issue.title }}
                     </a>
-
                     {% set state = issue.state.upper() %}
                     {% if state == 'OPEN' %}
                     <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-green-500">
@@ -119,23 +119,47 @@
                     {% endif %}
                 </div>
 
-                <p class="text-gray-700 mt-2">
-                    {{ issue.comments[0] if issue.comments else 'No description available.' }}
-                </p>
-
-                {% if issue.comments|length > 1 %}
-                <div class="mt-2 text-sm text-gray-600">
-                    <p class="font-semibold">Comments:</p>
-                    <ul class="list-disc pl-5">
-                        {% for comment in issue.comments[1:] %}
-                        <li>
-                            {{ comment[:50] }}...
-                            <a href="{{ issue.url }}" class="text-blue-500 hover:underline">Read more</a>
-                        </li>
-                        {% endfor %}
-                    </ul>
+                <div class="mt-4">
+                    <p class="text-lg font-semibold">Similarity Threshold</p>
+                    {% set threshold = issue.threshold %}
+                    <div class="mt-2 p-3 flex items-center border rounded-lg shadow-sm
+                        {% if threshold >= 0.8 %} bg-green-50 border-green-400 text-green-700 
+                        {% elif threshold >= 0.7 %} bg-blue-50 border-blue-400 text-blue-700 
+                        {% elif threshold >= 0.5 %} bg-yellow-50 border-yellow-400 text-yellow-700 
+                        {% else %} bg-red-50 border-red-400 text-red-700 {% endif %}">
+                        <div>
+                            {% if threshold >= 0.8 %}
+                            <p class="font-semibold">High similarity</p>
+                            <p class="text-sm">The vectors are very closely aligned.</p>
+                            {% elif threshold >= 0.7 %}
+                            <p class="font-semibold">Moderate similarity</p>
+                            <p class="text-sm">The vectors are fairly aligned.</p>
+                            {% elif threshold >= 0.5 %}
+                            <p class="font-semibold">Low similarity</p>
+                            <p class="text-sm">Some degree of similarity is observed.</p>
+                            {% else %}
+                            <p class="font-semibold">Minimal similarity</p>
+                            <p class="text-sm">The vectors are mostly unrelated.</p>
+                            {% endif %}
+                        </div>
+                
+                        <span class="ml-auto px-3 py-1 rounded-lg font-semibold
+                            {% if threshold >= 0.8 %} bg-green-200 text-green-800 
+                            {% elif threshold >= 0.7 %} bg-blue-200 text-blue-800 
+                            {% elif threshold >= 0.5 %} bg-yellow-200 text-yellow-800 
+                            {% else %} bg-red-200 text-red-800 {% endif %}">
+                            {{ threshold }}
+                        </span>
+                    </div>
                 </div>
-                {% endif %}
+                
+                
+                <div class="pt-4">
+                    <p class="text-xl font-semibold">Description (First comment)</p>
+                    <div class="markdown-body mt-2 pl-2 max-h-60 overflow-y-auto border-l-4 border-gray-300" 
+                        data-comment="{{ issue.comments[0] if issue.comments else 'No description available.' }}">
+                    </div>
+                </div>
             </li>
             {% endfor %}
         </ul>
@@ -159,6 +183,12 @@
             const issuesHeader = document.querySelector('#issuesHeader');
             if (issuesHeader) {
                 issuesHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+                const descriptions = document.querySelectorAll('.markdown-body');
+                for (let index = 0; index < descriptions.length; index++) {
+                    const comment = descriptions[index].getAttribute('data-comment')
+                    descriptions[index].innerHTML = convertMarkdownToHtml(comment);
+                }
             }
         });
     </script>

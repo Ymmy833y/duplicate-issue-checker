@@ -39,14 +39,6 @@ class TestIndex:
                 'repository': 'test_repository',
                 'title': 'test_title'
             }
-            sess['issues'] = [{
-                'number': 1,
-                'title': 'test_title',
-                'url': 'test_url',
-                'state': 'test_state',
-                'comments': ['test_comment']
-            }]
-            sess['detail'] = {'total': 1, 'message': 'test_message'}
             sess['error_message'] = 'test_error_message'
 
         response = client.get('/')
@@ -61,20 +53,10 @@ class TestIndex:
             'repository': 'test_repository',
             'title': 'test_title'
         }
-        assert context['issues'] == [{
-            'number': 1,
-            'title': 'test_title',
-            'url': 'test_url',
-            'state': 'test_state',
-            'comments': ['test_comment']
-        }]
-        assert context['detail'] == {'total': 1, 'message': 'test_message'}
         assert context['error_message'] == 'test_error_message'
 
         with client.session_transaction() as sess:
             assert 'form_data' not in sess
-            assert 'issues' not in sess
-            assert 'detail' not in sess
             assert 'error_message' not in sess
 
     def test_without_session_data(self, client, captured_templates):
@@ -86,8 +68,6 @@ class TestIndex:
         template, context = captured_templates[0]
         assert template.name == 'index.html'
         assert context['form_data'] == {}
-        assert context['issues'] == []
-        assert context['detail'] == {}
         assert context['error_message'] is None
 
 class TestSearch:
@@ -103,7 +83,8 @@ class TestSearch:
             'title': 'issue1',
             'url': 'http://example.com/1',
             'state': 'open',
-            'comments': ['comment1']
+            'comments': ['comment1'],
+            'threshold': 0.7,
         }]
         expected_detail = {'total': 1, 'message': 'Found 1 issue'}
 
