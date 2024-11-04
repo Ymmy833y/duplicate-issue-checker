@@ -1,12 +1,16 @@
+# pylint: disable=C0415
+
 import os
 from logging import FileHandler, StreamHandler, Formatter, getLogger
 from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 from .config import Config
-from .routes import main_routes
 
-def create_app():
+db = SQLAlchemy()
+
+def create_app(config_class=Config):
     app = Flask(__name__, template_folder='./templates', static_folder='./static')
-    app.config.from_object(Config)
+    app.config.from_object(config_class)
 
     log_directory = './log'
     os.makedirs(log_directory, exist_ok=True)
@@ -24,8 +28,13 @@ def create_app():
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    logger.debug('Flask app initialized with logging')
+    db.init_app(app)
 
+    with app.app_context():
+        from app.models import issue_model  # pylint: disable=unused-import
+        db.create_all()
+
+    from .routes import main_routes
     app.register_blueprint(main_routes)
 
     return app

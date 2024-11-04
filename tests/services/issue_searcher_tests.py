@@ -1,7 +1,10 @@
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
+import numpy as np
+import torch
 
 from app.services.issue_searcher import preprocess_text, IssueSearcher
-from app.schemas.issue_schema import Issue
+from app.schemas.issue_schema import IssueSchema
 
 class TestPreprocessText:
     def test_not_text(self):
@@ -40,43 +43,84 @@ class TestPreprocessText:
         assert preprocess_text(input_text) == expected_output
 
 class TestIssueSearcher:
-    @patch('app.services.issue_searcher.util.pytorch_cos_sim')
     @patch('app.services.issue_searcher.SentenceTransformer.encode')
-    def test_success(self, mock_encode, mock_pytorch_cos_sim):
-        issues = [
-            Issue(
-                number=1, title="Issue 1", url="http://example.com/1",
-                state="open", comments=["This is a test comment."]
-            ),
-            Issue(
-                number=2, title="Issue 2", url="http://example.com/2",
-                state="open", comments=["Another test comment."]
-            )
-        ]
-        title = "Test"
-        description = "This is a test description."
+    def test_generate_serialized_embedding(self, mock_encode):
+        searcher = IssueSearcher()
 
-        mock_encode.side_effect = lambda x, convert_to_tensor: MagicMock()
+        title = 'Issue Title'
+        comments = ['Comment one.', 'Comment two.']
+        input_text = preprocess_text(f"{title}: {' '.join(comments)}")
 
-        score1 = MagicMock()
-        score1.item.return_value = 0.9
-        score2 = MagicMock()
-        score2.item.return_value = 0.3
-        cosine_scores_list = [score1, score2]
+        embedding_np = np.random.rand(768).astype(np.float32)
+        mock_encode.return_value = embedding_np
 
-        mock_cosine_scores = MagicMock()
-        mock_cosine_scores.__getitem__.return_value = cosine_scores_list
-        mock_pytorch_cos_sim.return_value = mock_cosine_scores
+        embedding_bytes, shape_str = searcher.generate_serialized_embedding(title, comments)
 
+        mock_encode.assert_called_once_with(input_text, convert_to_tensor=False)
+
+        assert embedding_bytes == embedding_np.tobytes()
+        assert shape_str == '768'
+
+    def test_deserialize_embedding(self):
+        searcher = IssueSearcher()
+
+        embedding_np = np.random.rand(768).astype(np.float32)
+        embedding_bytes = embedding_np.tobytes()
+        shape_str = '768'
+
+        deserialized_embedding = searcher.deserialize_embedding(embedding_bytes, shape_str)
+
+        assert torch.allclose(torch.from_numpy(embedding_np), deserialized_embedding)
+
+    def test_find_related_issues(self):
         searcher = IssueSearcher()
         searcher.set_threshold(0.5)
 
-        related_issues = searcher.find_related_issues(issues, title, description)
+        # Manually set the embedding vector
+        # fake_embedding_2 and fake_search_embedding are set to the same vector to increase the similarity
+        fixed_vector = np.ones(768, dtype=np.float32)
+        fake_embedding_2 = fixed_vector
+        fake_search_embedding = fixed_vector
+
+        # fake_embedding_1 is set to a different vector (low similarity)
+        fake_embedding_1 = np.zeros(768, dtype=np.float32)
+
+        # Serialize embedding
+        issue_embedding_1 = fake_embedding_1.tobytes()
+        issue_shape_1 = '768'
+        issue_embedding_2 = fake_embedding_2.tobytes()
+        issue_shape_2 = '768'
+
+        # Mock SentenceTransformer.encode
+        with patch.object(searcher.model, 'encode', return_value=fake_search_embedding):
+            issues = [
+                IssueSchema(
+                    name='test_owner/test_repo',
+                    number=1,
+                    title='issue 1',
+                    url='https://github.com/test_owner/test_repo/issues/1',
+                    state='close',
+                    comments=['Comment1'],
+                    embedding=issue_embedding_1,
+                    shape=issue_shape_1,
+                    updated='2024-01-01'
+                ),
+                IssueSchema(
+                    name='test_owner/test_repo',
+                    number=2,
+                    title='issue 2',
+                    url='https://github.com/test_owner/test_repo/issues/2',
+                    state='open',
+                    comments=['Comment 2'],
+                    embedding=issue_embedding_2,
+                    shape=issue_shape_2,
+                    updated='2024-01-01'
+                )
+            ]
+            title = 'title'
+            description = 'description'
+
+            related_issues = searcher.find_related_issues(issues, title, description)
 
         assert len(related_issues) == 1
-        assert related_issues[0].number == 1
-        mock_encode.assert_any_call(preprocess_text(f"{title}: {description}"), convert_to_tensor=True)
-        mock_encode.assert_any_call([
-            preprocess_text(f"{issue.title}: {' '.join(issue.comments)}") for issue in issues
-        ], convert_to_tensor=True)
-        mock_pytorch_cos_sim.assert_called_once()
+        assert related_issues[0].number == 2
