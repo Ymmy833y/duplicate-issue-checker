@@ -10,7 +10,7 @@
 
 <body class="min-h-screen flex flex-col bg-gray-100">
     <header class="bg-yellow-500 text-white py-4 mb-4">
-        <h1 class="text-4xl font-bold text-center">Duplicate Issue Checker</h1>
+        <h1 class="text-4xl font-bold text-center"><a href="/">Duplicate Issue Checker</a></h1>
     </header>
     <div class="flex-grow max-w-6xl w-full mx-auto bg-white shadow-lg rounded p-6 mb-4">
         <div class="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 rounded mb-4 mx-auto">
@@ -96,7 +96,7 @@
                 <div class="flex justify-between items-center">
                     <a href="{{ issue.url }}" target="_blank"
                         class="text-lg font-semibold text-blue-600 hover:underline">
-                        {{ issue.title }}
+                        #{{ issue.number}} {{ issue.title }}
                     </a>
 
                     {% set state = issue.state.upper() %}

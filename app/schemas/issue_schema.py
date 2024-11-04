@@ -1,11 +1,22 @@
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, field
+from app.schemas.base_issue_schema import BaseIssueSchema
+from app.models.issue_model import Issue
 
 @dataclass
-class Issue:
-    number: int
-    title: str
-    url: str
-    state: str
-    comments: List[str]
-    threshold: Optional[float] = None
+class IssueSchema(BaseIssueSchema):
+    embedding: bytes = field(default_factory=bytes)
+    shape: str = ""
+    updated: str = ""
+
+    def to_issue(self) -> Issue:
+        return Issue(
+            name=self.name,
+            number=self.number,
+            comments=self.comments,
+            embedding=self.embedding,
+            shape=self.shape,
+            updated=self.updated
+        )
+
+    def __repr__(self):
+        return f'<IssueSchema name={self.name} number={self.number}>'

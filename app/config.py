@@ -11,3 +11,6 @@ class Config:
 
     SECRET_KEY = os.getenv('SECRET_KEY') or 'dummy'
     GITHUB_ACCESS_TOKEN = os.getenv('GITHUB_ACCESS_TOKEN') or ''
+
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///issues.db'
+    SQLALCHEMY_TRACK_MODIFICATIONS = False

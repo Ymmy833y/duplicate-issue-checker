@@ -4,12 +4,16 @@ from unittest.mock import patch
 import pytest
 from flask import template_rendered
 from app import create_app
-from app.utils.exceptions import MissingFieldsError, RepositoryNotFoundError
+from app.utils.exceptions import (
+    MissingFieldsError, RepositoryNotFoundError,
+    RateLimitExceededError, UnauthorizedError
+)
+
+from tests.testing_config import TestingConfig
 
 @pytest.fixture
 def test_app():
-    app = create_app()
-    app.config['TESTING'] = True
+    app = create_app(TestingConfig)
     return app
 
 @pytest.fixture
@@ -88,7 +92,7 @@ class TestIndex:
 
 class TestSearch:
     @patch('app.routes.get_related_issues')
-    def test_search_success(self, mock_get_related_issues, client):
+    def test_success(self, mock_get_related_issues, client):
         form_data = {
             'owner': 'test_owner',
             'repository': 'test_repository',
@@ -107,17 +111,11 @@ class TestSearch:
 
         response = client.post('/search', data=form_data, follow_redirects=False)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert sess['issues'] == expected_issues
-            assert sess['detail'] == expected_detail
-            assert 'error_message' not in sess
+        assert response.status_code == 200
+        assert b'Found 1 issue' in response.data
 
     @patch('app.routes.get_related_issues')
-    def test_search_missing_fields_error(self, mock_get_related_issues, client):
+    def test_missing_fields_error(self, mock_get_related_issues, client):
         form_data = {
             'owner': '',
             'repository': 'test_repository',
@@ -137,7 +135,7 @@ class TestSearch:
             assert sess['error_message'] == 'Missing fields: owner'
 
     @patch('app.routes.get_related_issues')
-    def test_search_repository_not_found_error(self, mock_get_related_issues, client):
+    def test_repository_not_found_error(self, mock_get_related_issues, client):
         form_data = {
             'owner': 'test_owner',
             'repository': 'nonexistent_repo',
@@ -161,7 +159,53 @@ class TestSearch:
             )
 
     @patch('app.routes.get_related_issues')
-    def test_search_unexpected_exception(self, mock_get_related_issues, client):
+    def test_rate_limit_error(self, mock_get_related_issues, client):
+        form_data = {
+            'owner': 'test_owner',
+            'repository': 'test_repo',
+            'title': 'test_title'
+        }
+        mock_get_related_issues.side_effect = RateLimitExceededError(
+            '2024-01-01'
+        )
+
+        response = client.post('/search', data=form_data, follow_redirects=False)
+
+        assert response.status_code == 302
+        assert response.headers['Location'] == '/'
+
+        with client.session_transaction() as sess:
+            assert sess['form_data'] == form_data
+            assert 'issues' not in sess
+            assert 'detail' not in sess
+            assert sess['error_message'] == (
+                'Rate limit exceeded. Try again after 2024-01-01'
+            )
+
+    @patch('app.routes.get_related_issues')
+    def test_unauthorized_error(self, mock_get_related_issues, client):
+        form_data = {
+            'owner': 'test_owner',
+            'repository': 'test_repo',
+            'title': 'test_title'
+        }
+        mock_get_related_issues.side_effect = UnauthorizedError()
+
+        response = client.post('/search', data=form_data, follow_redirects=False)
+
+        assert response.status_code == 302
+        assert response.headers['Location'] == '/'
+
+        with client.session_transaction() as sess:
+            assert sess['form_data'] == form_data
+            assert 'issues' not in sess
+            assert 'detail' not in sess
+            assert sess['error_message'] == (
+                'Unauthorized access. Please check your GITHUB_ACCESS_TOKEN'
+            )
+
+    @patch('app.routes.get_related_issues')
+    def test_unexpected_exception(self, mock_get_related_issues, client):
         form_data = {
             'owner': 'test_owner',
             'repository': 'test_repository',
