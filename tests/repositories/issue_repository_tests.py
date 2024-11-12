@@ -24,7 +24,7 @@ class TestIssueRepository:
             db.session.commit()
 
     def create_issue(
-            self, name, number, comments=None, embedding=b'\x00\x01', shape='circle', updated='2024-01-01'
+            self, name, number, comments=None, embedding=b'\x00\x01', shape='768', updated='2024-01-01'
         ):
         return Issue(
             name=name,
@@ -35,53 +35,65 @@ class TestIssueRepository:
             updated=updated
         )
 
-    def test_insert_issue(self):
-        issue = self.create_issue(name='Test Issue', number=1, comments=['Test comment'])
-        IssueRepository.insert(issue)
-        retrieved_issue = Issue.query.first()
-        assert retrieved_issue.name == 'Test Issue'
-        assert retrieved_issue.number == 1
-        assert retrieved_issue.comments == ['Test comment']
-        assert retrieved_issue.embedding == b'\x00\x01'
-        assert retrieved_issue.shape == 'circle'
-        assert retrieved_issue.updated == '2024-01-01'
-
     def test_select_all_issues(self):
-        issue1 = self.create_issue(name='Issue 1', number=1, shape='square', updated='2024-01-02')
-        issue2 = self.create_issue(name='Issue 2', number=2, shape='triangle', updated='2024-01-03')
-        IssueRepository.insert(issue1)
-        IssueRepository.insert(issue2)
+        insert_issues = [
+            self.create_issue(name='Issue 1', number=1, shape='768', updated='2024-01-02'),
+            self.create_issue(name='Issue 2', number=2, shape='768', updated='2024-01-03')
+        ]
+        IssueRepository.bulk_insert(insert_issues)
+
         issues = IssueRepository.select_all()
         assert len(issues) == 2
 
     def test_select_by_name(self):
-        issue = self.create_issue(name='Unique Issue', number=3, shape='hexagon', updated='2024-01-04')
-        IssueRepository.insert(issue)
+        insert_issues = [
+            self.create_issue(name='Unique Issue', number=3, shape='768', updated='2024-01-04'),
+            self.create_issue(name='Issue 2', number=2, shape='768', updated='2024-01-03')
+        ]
+        IssueRepository.bulk_insert(insert_issues)
+
         issues = IssueRepository.select_by_name('Unique Issue')
         assert len(issues) == 1
         assert issues[0].number == 3
-        assert issues[0].shape == 'hexagon'
+        assert issues[0].shape == '768'
 
-    def test_update_issue(self):
-        issue = self.create_issue(
-            name='Update Issue', number=4, comments=['Old comment'], shape='pentagon', updated='2024-01-05'
-        )
-        IssueRepository.insert(issue)
+    def test_bulk_insert(self):
+        issues = [
+            self.create_issue(name='Test Issue', number=1, comments=['Test comment1']),
+            self.create_issue(name='Test Issue', number=2, comments=['Test comment2'])
+        ]
+        IssueRepository.bulk_insert(issues)
+        retrieved_issue = Issue.query.all()
+        assert len(retrieved_issue) == 2
+        assert retrieved_issue[0].name == 'Test Issue'
+        assert retrieved_issue[0].number == 1
+        assert retrieved_issue[0].comments == ['Test comment1']
+        assert retrieved_issue[0].embedding == b'\x00\x01'
+        assert retrieved_issue[0].shape == '768'
+        assert retrieved_issue[0].updated == '2024-01-01'
+        assert retrieved_issue[1].name == 'Test Issue'
+        assert retrieved_issue[1].number == 2
+        assert retrieved_issue[1].comments == ['Test comment2']
+        assert retrieved_issue[1].embedding == b'\x00\x01'
+        assert retrieved_issue[1].shape == '768'
+        assert retrieved_issue[1].updated == '2024-01-01'
 
-        updated_issue = self.create_issue(
-            name='Update Issue', number=4, comments=['New comment'],
-            embedding=b'\x00\x05', shape='octagon', updated='2024-01-06'
-        )
-        success = IssueRepository.update(updated_issue)
-        assert success is True
+    def test_delete_all_by_primary_key(self):
+        insert_issues = [
+            self.create_issue(name='Test Issue', number=1, comments=['Test comment1']),
+            self.create_issue(name='Delete Issue', number=1, comments=['Test comment1']),
+            self.create_issue(name='Delete Issue', number=2, comments=['Test comment2']),
+        ]
+        IssueRepository.bulk_insert(insert_issues)
 
-        retrieved_issue = Issue.query.filter_by(name='Update Issue', number=4).first()
-        assert retrieved_issue.comments == ['New comment']
-        assert retrieved_issue.embedding == b'\x00\x05'
-        assert retrieved_issue.shape == 'octagon'
-        assert retrieved_issue.updated == '2024-01-06'
+        issues = [
+            Issue(name='Delete Issue', number=1),
+            Issue(name='Delete Issue', number=2),
+        ]
+        IssueRepository.delete_all_by_primary_key(issues)
 
-    def test_update_nonexistent_issue(self):
-        updated_issue = self.create_issue(name='Nonexistent Issue', number=5, shape='circle', updated='2024-01-07')
-        success = IssueRepository.update(updated_issue)
-        assert success is False
+        retrieved_issue = Issue.query.all()
+        assert len(retrieved_issue) == 1
+        assert retrieved_issue[0].name == 'Test Issue'
+        assert retrieved_issue[0].number == 1
+        assert retrieved_issue[0].comments == ['Test comment1']

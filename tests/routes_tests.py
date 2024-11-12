@@ -147,7 +147,7 @@ class TestSearch:
             'title': 'test_title'
         }
         mock_get_related_issues.side_effect = RateLimitExceededError(
-            '2024-01-01'
+            reset_time=1234567890
         )
 
         response = client.post('/search', data=form_data, follow_redirects=False)
@@ -160,7 +160,7 @@ class TestSearch:
             assert 'issues' not in sess
             assert 'detail' not in sess
             assert sess['error_message'] == (
-                'Rate limit exceeded. Try again after 2024-01-01'
+                'Rate limit exceeded. Try again after 2009-02-13 23:31:30 (UTC)'
             )
 
     @patch('app.routes.get_related_issues')

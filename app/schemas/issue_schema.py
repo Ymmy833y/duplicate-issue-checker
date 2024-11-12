@@ -5,8 +5,8 @@ from app.models.issue_model import Issue
 @dataclass
 class IssueSchema(BaseIssueSchema):
     embedding: bytes = field(default_factory=bytes)
-    shape: str = ""
-    updated: str = ""
+    shape: str = ''
+    updated: str = ''
 
     def to_issue(self) -> Issue:
         return Issue(

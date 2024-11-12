@@ -1,3 +1,4 @@
+import logging
 import re
 from typing import List
 
@@ -7,6 +8,8 @@ from sentence_transformers import SentenceTransformer, util
 
 from app.schemas.issue_schema import IssueSchema
 from app.schemas.display_issue_schema import DisplayIssueSchema
+
+logger = logging.getLogger(__name__)
 
 def preprocess_text(text: str):
     if not text:
@@ -33,9 +36,9 @@ class IssueSearcher:
         """
         self.threshold = threshold
 
-    def generate_serialized_embedding(self, title: str, comments: List[str]) -> tuple[bytes, str]:
+    async def generate_serialized_embedding(self, title: str, comments: List[str]) -> tuple[bytes, str]:
         """
-        Generate a serialized embedding for a given title and associated comments.
+        Asynchronously generate a serialized embedding for a given title and associated comments.
 
         :param title: The title for which the embedding is generated.
         :param comments: A list of comment strings associated with the title.
@@ -64,9 +67,11 @@ class IssueSearcher:
         np_array = np.frombuffer(byte_data, dtype=np.float32).reshape(shape)
         return torch.from_numpy(np_array.copy())
 
-    def find_related_issues(self, issues: List[IssueSchema], title: str, description: str) -> List[DisplayIssueSchema]:
+    async def find_related_issues(
+        self, issues: List[IssueSchema], title: str, description: str
+    ) -> List[DisplayIssueSchema]:
         """
-        Find issue comments that are semantically similar to the search query using SBERT.
+        Asynchronously find issue comments that are semantically similar to the search query using SBERT.
 
         :param issues: List of issue to search within
         :param title: Search query

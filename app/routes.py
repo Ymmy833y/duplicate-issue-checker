@@ -3,7 +3,8 @@ import traceback
 from flask import Blueprint, render_template, redirect, url_for, request, session
 from .services.issue_service import get_related_issues
 from .utils.exceptions import (
-    MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError, UnauthorizedError
+    MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError,
+    UnauthorizedError, IssueFetchFailedError
 )
 
 main_routes = Blueprint('main_routes', __name__)
@@ -22,10 +23,10 @@ def index():
     )
 
 @main_routes.route('/search', methods=['POST'])
-def search():
+async def search():
     logger.debug('Search is called')
     try:
-        issues, detail = get_related_issues(request.form)
+        issues, detail = await get_related_issues(request.form)
         return render_template(
             'index.html',
             form_data=request.form.to_dict(),
@@ -33,7 +34,8 @@ def search():
             detail=detail
         )
     except (
-        MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError, UnauthorizedError
+        MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError,
+        UnauthorizedError, IssueFetchFailedError
     ) as e:
         logger.error('%s', e)
         logger.error(traceback.format_exc())
