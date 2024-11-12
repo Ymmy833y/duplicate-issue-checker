@@ -1,5 +1,6 @@
 from unittest.mock import patch
 
+import pytest
 import numpy as np
 import torch
 
@@ -43,8 +44,9 @@ class TestPreprocessText:
         assert preprocess_text(input_text) == expected_output
 
 class TestIssueSearcher:
+    @pytest.mark.asyncio
     @patch('app.services.issue_searcher.SentenceTransformer.encode')
-    def test_generate_serialized_embedding(self, mock_encode):
+    async def test_generate_serialized_embedding(self, mock_encode):
         searcher = IssueSearcher()
 
         title = 'Issue Title'
@@ -54,7 +56,7 @@ class TestIssueSearcher:
         embedding_np = np.random.rand(768).astype(np.float32)
         mock_encode.return_value = embedding_np
 
-        embedding_bytes, shape_str = searcher.generate_serialized_embedding(title, comments)
+        embedding_bytes, shape_str = await searcher.generate_serialized_embedding(title, comments)
 
         mock_encode.assert_called_once_with(input_text, convert_to_tensor=False)
 
@@ -72,7 +74,9 @@ class TestIssueSearcher:
 
         assert torch.allclose(torch.from_numpy(embedding_np), deserialized_embedding)
 
-    def test_find_related_issues(self):
+
+    @pytest.mark.asyncio
+    async def test_find_related_issues(self):
         searcher = IssueSearcher()
         searcher.set_threshold(0.5)
 
@@ -120,7 +124,7 @@ class TestIssueSearcher:
             title = 'title'
             description = 'description'
 
-            related_issues = searcher.find_related_issues(issues, title, description)
+            related_issues = await searcher.find_related_issues(issues, title, description)
 
         assert len(related_issues) == 1
         assert related_issues[0].number == 2

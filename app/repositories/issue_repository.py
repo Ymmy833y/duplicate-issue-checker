@@ -1,6 +1,9 @@
+import logging
 from typing import List
 from app import db
 from app.models.issue_model import Issue
+
+logger = logging.getLogger(__name__)
 
 class IssueRepository:
     @staticmethod
@@ -9,28 +12,26 @@ class IssueRepository:
 
     @staticmethod
     def select_by_name(name: str) -> List[Issue]:
-        return Issue.query.filter(Issue.name == name).all()
+        logger.info('Selecting issues by name: %s', name)
+        issues = Issue.query.filter(Issue.name == name).all()
+        logger.info('Selected %d issues for name: %s', len(issues), name)
+        return issues
 
     @staticmethod
-    def insert(issue: Issue):
-        db.session.add(issue)
+    def bulk_insert(issues: List[Issue]):
+        logger.info('Inserting %d issues in bulk', len(issues))
+        db.session.bulk_save_objects(issues)
         db.session.commit()
+        logger.info('Bulk insert completed')
 
     @staticmethod
-    def update(new_issue: Issue):
-        issue = Issue.query.filter_by(name=new_issue.name, number=new_issue.number).first()
+    def delete_all_by_primary_key(issues: List[Issue]):
+        issue_names = [issue.name for issue in issues]
+        issue_numbers = [issue.number for issue in issues]
+        logger.info('Deleting %d issues by primary key: %s', len(issues), list(zip(issue_names, issue_numbers)))
 
-        if issue is None:
-            return False
-
-        if new_issue.comments is not None:
-            issue.comments = new_issue.comments
-        if new_issue.embedding is not None:
-            issue.embedding = new_issue.embedding
-        if new_issue.shape is not None:
-            issue.shape = new_issue.shape
-        if new_issue.updated is not None:
-            issue.updated = new_issue.updated
-
+        Issue.query.filter(
+            Issue.name.in_(issue_names), Issue.number.in_(issue_numbers)
+        ).delete(synchronize_session=False)
         db.session.commit()
-        return True
+        logger.info('Deletion by primary key completed')
