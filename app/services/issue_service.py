@@ -25,6 +25,11 @@ async def get_related_issues(form_data: ImmutableMultiDict[str, str]):
     related_issues = await issue_searcher.find_related_issues(
         issues, form_data.get('title'), form_data.get('description')
     )
+
+    related_issues.sort(
+        key=lambda x: x.threshold if x.threshold is not None else float('-inf'),
+        reverse=True
+    )
     logger.debug('related_issues: %s', related_issues)
     return related_issues, get_related_issues_detail(len(related_issues))
 
