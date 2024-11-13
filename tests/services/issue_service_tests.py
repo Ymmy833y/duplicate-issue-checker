@@ -54,6 +54,15 @@ class TestGetRelatedIssues:
         mock_find_related_issues.return_value = [
             DisplayIssueSchema(
                 name='test_owner/test_repo',
+                number=1,
+                title='issue1',
+                url='url',
+                state='open',
+                comments=['comment1', 'comment2'],
+                threshold=0.5
+            ),
+            DisplayIssueSchema(
+                name='test_owner/test_repo',
                 number=2,
                 title='issue2',
                 url='url',
@@ -69,6 +78,7 @@ class TestGetRelatedIssues:
         mock_find_related_issues.assert_called_once_with(
             mock_get_issues.return_value, 'test_title', 'test_description')
 
+        # Validating sorting
         assert related_issues == [
             DisplayIssueSchema(
                 name='test_owner/test_repo',
@@ -78,11 +88,20 @@ class TestGetRelatedIssues:
                 state='open',
                 comments=['comment3'],
                 threshold=0.7
+            ),
+            DisplayIssueSchema(
+                name='test_owner/test_repo',
+                number=1,
+                title='issue1',
+                url='url',
+                state='open',
+                comments=['comment1', 'comment2'],
+                threshold=0.5
             )
         ]
         assert related_issues_detail == IssueDetaiSchema(
-            total=1,
-            message='There are 1 related issues.'
+            total=2,
+            message='There are 2 related issues.'
         )
 
 class TestGetIssues:
