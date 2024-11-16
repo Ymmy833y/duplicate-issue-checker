@@ -21,12 +21,10 @@
             <p>When searching, please enter the issue title and description (optional) as if creating a new issue. The
                 more information provided, the better the quality of the search results.</p>
         </div>
-        <form action="/search" method="post" class="space-y-2">
-            {% if error_message %}
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-                <span class="block sm:inline">{{ error_message }}</span>
+        <form action="/search" method="post" class="space-y-2" id="search-form">
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative hidden" id="error_message" role="alert">
+                <span class="block sm:inline"></span>
             </div>
-            {% endif %}
             <div>
                 <label for="owner" class="block text-gray-700 font-semibold mb-2">
                     Repository URL
@@ -67,105 +65,45 @@
         </form>
     </div>
 
-    {% if detail and detail.total is not none and detail.message %}
-    <div class="flex-grow max-w-6xl w-full mx-auto bg-white shadow-lg rounded p-6 mb-4">
+    <div id="related-issues-content" class="flex-grow max-w-6xl w-full mx-auto bg-white shadow-lg rounded p-6 mb-4 hidden">
         <h2 class="text-2xl mb-4" id="issuesHeader">Related Issues</h2>
-        {% if detail.total == 0 %}
-        <div class="flex items-center bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded mb-4">
-            <svg class="w-6 h-6 mr-2 text-green-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-            </svg>
-            <div>
-                <p>{{ detail.message }}</p>
-            </div>
-        </div>
-        {% else %}
-        <div class="flex items-center bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded mb-4">
+        <div id="detail-content" class="flex items-center bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded mb-4">
             <svg class="w-6 h-6 mr-2 text-yellow-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m-3-8h.01M7 20h10a2 2 0 002-2V6a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <div>
-                <p>{{ detail.message }}</p>
-            </div>
+            <p>There are 1 related issues.</p>
         </div>
-        {% endif %}
 
-        {% if issues %}
-        <ul class="space-y-4">
-            {% for issue in issues %}
+        <ul id="issues-content" class="space-y-4">
             <li class="border border-gray-300 rounded p-4">
                 <div class="flex justify-between items-center">
-                    <a href="{{ issue.url }}" target="_blank"
+                    <a href="https://github.com/Ymmy833y/duplicate-issue-checker" target="_blank"
                         class="text-lg font-semibold text-blue-600 hover:underline">
-                        #{{ issue.number}} {{ issue.title }}
+                        #1 Fix Test
                     </a>
-                    {% set state = issue.state.upper() %}
-                    {% if state == 'OPEN' %}
-                    <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-green-500">
-                        OPEN
-                    </span>
-                    {% elif state == 'CLOSED' %}
-                    <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-red-500">
-                        CLOSED
-                    </span>
-                    {% elif state == 'MERGED' %}
-                    <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-purple-500">
-                        MERGED
-                    </span>
-                    {% else %}
-                    <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-gray-500">
-                        {{ state }}
-                    </span>
-                    {% endif %}
+                    <span class="ml-2 px-3 py-1 rounded-full text-white text-sm bg-green-500">OPEN</span>
                 </div>
 
                 <div class="mt-4">
                     <p class="text-lg font-semibold">Similarity Threshold</p>
-                    {% set threshold = issue.threshold %}
-                    <div class="mt-2 p-3 flex items-center border rounded-lg shadow-sm
-                        {% if threshold >= 0.8 %} bg-green-50 border-green-400 text-green-700 
-                        {% elif threshold >= 0.7 %} bg-blue-50 border-blue-400 text-blue-700 
-                        {% elif threshold >= 0.5 %} bg-yellow-50 border-yellow-400 text-yellow-700 
-                        {% else %} bg-red-50 border-red-400 text-red-700 {% endif %}">
+                    <div class="mt-2 p-3 flex items-center border rounded-lg shadow-sm bg-green-50 border-green-400 text-green-700">
                         <div>
-                            {% if threshold >= 0.8 %}
                             <p class="font-semibold">High similarity</p>
                             <p class="text-sm">The vectors are very closely aligned.</p>
-                            {% elif threshold >= 0.7 %}
-                            <p class="font-semibold">Moderate similarity</p>
-                            <p class="text-sm">The vectors are fairly aligned.</p>
-                            {% elif threshold >= 0.5 %}
-                            <p class="font-semibold">Low similarity</p>
-                            <p class="text-sm">Some degree of similarity is observed.</p>
-                            {% else %}
-                            <p class="font-semibold">Minimal similarity</p>
-                            <p class="text-sm">The vectors are mostly unrelated.</p>
-                            {% endif %}
                         </div>
-                
-                        <span class="ml-auto px-3 py-1 rounded-lg font-semibold
-                            {% if threshold >= 0.8 %} bg-green-200 text-green-800 
-                            {% elif threshold >= 0.7 %} bg-blue-200 text-blue-800 
-                            {% elif threshold >= 0.5 %} bg-yellow-200 text-yellow-800 
-                            {% else %} bg-red-200 text-red-800 {% endif %}">
-                            {{ threshold }}
-                        </span>
+                        <span class="ml-auto px-3 py-1 rounded-lg font-semibold bg-green-200 text-green-800">0.8</span>
                     </div>
                 </div>
-                
-                
+
                 <div class="pt-4">
                     <p class="text-xl font-semibold">Description (First comment)</p>
-                    <div class="markdown-body mt-2 pl-2 max-h-60 overflow-y-auto border-l-4 border-gray-300" 
-                        data-comment="{{ issue.comments[0] if issue.comments else 'No description available.' }}">
+                    <div class="markdown-body mt-2 pl-2 max-h-60 overflow-y-auto border-l-4 border-gray-300">
+                        No description available.
                     </div>
                 </div>
             </li>
-            {% endfor %}
         </ul>
-        {% endif %}
     </div>
-    {% endif %}
 
     <footer class="bg-yellow-600 text-white py-4">
         <div class="container mx-auto text-center">
@@ -178,21 +116,7 @@
         </div>
     </footer>
 
-    <script type="text/javascript">
-        document.addEventListener('DOMContentLoaded', () => {
-            const issuesHeader = document.querySelector('#issuesHeader');
-            if (issuesHeader) {
-                issuesHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-                const descriptions = document.querySelectorAll('.markdown-body');
-                for (let index = 0; index < descriptions.length; index++) {
-                    const comment = descriptions[index].getAttribute('data-comment')
-                    descriptions[index].innerHTML = convertMarkdownToHtml(comment);
-                }
-            }
-        });
-    </script>
-
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 
 </html>
