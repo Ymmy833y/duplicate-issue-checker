@@ -90,10 +90,13 @@ class TestSearch:
 
         mock_get_related_issues.return_value = (expected_issues, expected_detail)
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
         assert response.status_code == 200
-        assert b'Found 1 issue' in response.data
+        assert response.json == {
+            'issues': expected_issues,
+            'detail': expected_detail
+        }
 
     @patch('app.routes.get_related_issues')
     def test_missing_fields_error(self, mock_get_related_issues, client):
@@ -104,16 +107,12 @@ class TestSearch:
         }
         mock_get_related_issues.side_effect = MissingFieldsError(['owner'])
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert 'issues' not in sess
-            assert 'detail' not in sess
-            assert sess['error_message'] == 'Missing fields: owner'
+        assert response.status_code == 400
+        assert response.json == {
+            'errorMessage': 'Missing fields: owner'
+        }
 
     @patch('app.routes.get_related_issues')
     def test_repository_not_found_error(self, mock_get_related_issues, client):
@@ -126,18 +125,12 @@ class TestSearch:
             'test_owner', 'nonexistent_repo'
         )
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert 'issues' not in sess
-            assert 'detail' not in sess
-            assert sess['error_message'] == (
-                'Repository not found: https://github.com/test_owner/nonexistent_repo'
-            )
+        assert response.status_code == 400
+        assert response.json == {
+            'errorMessage': 'Repository not found: https://github.com/test_owner/nonexistent_repo'
+        }
 
     @patch('app.routes.get_related_issues')
     def test_rate_limit_error(self, mock_get_related_issues, client):
@@ -150,18 +143,12 @@ class TestSearch:
             reset_time=1234567890
         )
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert 'issues' not in sess
-            assert 'detail' not in sess
-            assert sess['error_message'] == (
-                'Rate limit exceeded. Try again after 2009-02-13 23:31:30 (UTC)'
-            )
+        assert response.status_code == 400
+        assert response.json == {
+            'errorMessage': 'Rate limit exceeded. Try again after 2009-02-13 23:31:30 (UTC)'
+        }
 
     @patch('app.routes.get_related_issues')
     def test_unauthorized_error(self, mock_get_related_issues, client):
@@ -172,18 +159,12 @@ class TestSearch:
         }
         mock_get_related_issues.side_effect = UnauthorizedError()
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert 'issues' not in sess
-            assert 'detail' not in sess
-            assert sess['error_message'] == (
-                'Unauthorized access. Please check your GITHUB_ACCESS_TOKEN'
-            )
+        assert response.status_code == 400
+        assert response.json == {
+            'errorMessage': 'Unauthorized access. Please check your GITHUB_ACCESS_TOKEN'
+        }
 
     @patch('app.routes.get_related_issues')
     def test_unexpected_exception(self, mock_get_related_issues, client):
@@ -194,15 +175,9 @@ class TestSearch:
         }
         mock_get_related_issues.side_effect = Exception()
 
-        response = client.post('/search', data=form_data, follow_redirects=False)
+        response = client.post('/search', json=form_data)
 
-        assert response.status_code == 302
-        assert response.headers['Location'] == '/'
-
-        with client.session_transaction() as sess:
-            assert sess['form_data'] == form_data
-            assert 'issues' not in sess
-            assert 'detail' not in sess
-            assert sess['error_message'] == (
-                'An unexpected error occurred. Please try again.'
-            )
+        assert response.status_code == 500
+        assert response.json == {
+            'errorMessage': 'An unexpected error occurred. Please try again.'
+        }

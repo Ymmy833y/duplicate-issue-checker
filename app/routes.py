@@ -1,6 +1,6 @@
 import logging
 import traceback
-from flask import Blueprint, render_template, redirect, url_for, jsonify, request, session
+from flask import Blueprint, render_template, jsonify, request, session
 from .services.issue_service import get_related_issues
 from .utils.exceptions import (
     MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError,
