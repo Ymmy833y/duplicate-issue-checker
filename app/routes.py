@@ -1,6 +1,6 @@
 import logging
 import traceback
-from flask import Blueprint, render_template, redirect, url_for, request, session
+from flask import Blueprint, render_template, jsonify, request, session
 from .services.issue_service import get_related_issues
 from .utils.exceptions import (
     MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError,
@@ -26,24 +26,19 @@ def index():
 async def search():
     logger.debug('Search is called')
     try:
-        issues, detail = await get_related_issues(request.form)
-        return render_template(
-            'index.html',
-            form_data=request.form.to_dict(),
-            issues=issues,
-            detail=detail
-        )
+        issues, detail = await get_related_issues(request.get_json())
+        return jsonify({
+            "issues": issues,
+            "detail": detail
+        })
     except (
         MissingFieldsError, RepositoryNotFoundError, RateLimitExceededError,
         UnauthorizedError, IssueFetchFailedError
     ) as e:
         logger.error('%s', e)
         logger.error(traceback.format_exc())
-        session['error_message'] = str(e)
+        return jsonify({"errorMessage": str(e)}), 400
     except Exception as e:
         logger.error('An unexpected error occurred: %s', e)
         logger.error(traceback.format_exc())
-        session['error_message'] = 'An unexpected error occurred. Please try again.'
-
-    session['form_data'] = request.form.to_dict()
-    return redirect(url_for('main_routes.index'))
+        return jsonify({"errorMessage": 'An unexpected error occurred. Please try again.'}), 500
