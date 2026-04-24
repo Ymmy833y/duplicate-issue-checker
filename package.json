@@ -10,7 +10,7 @@
   "license": "MIT",
   "devDependencies": {
     "tailwindcss": "^3.4.14",
-    "webpack": "^5.96.1",
+    "webpack": "^5.104.1",
     "webpack-cli": "^5.1.4"
   },
   "dependencies": {
